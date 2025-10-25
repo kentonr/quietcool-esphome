@@ -52,7 +52,7 @@ ble_client:
       - delay: 2s
       - script.execute:
           id: send_ble_msg
-          msg: !lambda return "{\"Api\":\"Login\",\"PhoneID\":\"" + id(pair_id).state + "\"}";
+          msg: !lambda return "{\"A\":13,\"P\":\"" + id(pair_id).state + "\"}";
       - script.wait: send_ble_msg
 
 # Global Variables and Utilities
@@ -84,7 +84,7 @@ script:
     then:
       - script.execute:
           id: send_ble_msg
-          msg: !lambda return "{\"Api\":\"SetMode\",\"Mode\":\"" + mode + "\"}";
+          msg: !lambda return "{\"A\":9,\"M\":\"" + mode + "\"}";
       - script.wait: send_ble_msg
   - id: set_timer
     parameters:
@@ -94,7 +94,7 @@ script:
     then:
       - script.execute:
           id: send_ble_msg
-          msg: !lambda return "{\"Api\":\"SetTime\",\"SetHour\":" + std::to_string(hours) + ",\"SetMinute\":" + std::to_string(minutes) + ",\"SetTime_Range\":\"" + speed + "\"}";
+          msg: !lambda return "{\"A\":7,\"H\":" + std::to_string(hours) + ",\"M\":" + std::to_string(minutes) + ",\"R\":\"" + speed + "\"}";
       - script.wait: send_ble_msg
   - id: send_ble_msg
     parameters:
@@ -219,7 +219,7 @@ button:
       then:
         - script.execute:
             id: send_ble_msg
-            msg: !lambda return "{\"Api\":\"Pair\",\"PhoneID\":\"" + id(pair_id).state + "\"}";
+            msg: !lambda return "{\"A\":14,\"P\":\"" + id(pair_id).state + "\"}";
         - script.wait: send_ble_msg
 
 # Sensor Templates and Configurations
@@ -339,7 +339,8 @@ text_sensor:
               id(quietcool_ble_data).publish_state(accumulated);
               ESP_LOGD("quietcool", "Received JSON data: %s", accumulated.c_str());
               bool parsed = false;
-              json::parse_json(accumulated, [&parsed](JsonObject root) -> bool {
+              // substr to remove "QQ" prefix from JSON response
+              json::parse_json(accumulated.substr(2), [&parsed](JsonObject root) -> bool {
                 parsed = true;
                 
                 // Iterate through all JSON keys
@@ -401,17 +402,20 @@ interval:
     then:
       - script.execute:
           id: send_ble_msg
-          msg: !lambda return "{\"Api\":\"GetParameter\"}";
+          # GetParameter
+          msg: !lambda return "{\"A\":2}";
       - script.wait: send_ble_msg
       - delay: 5s
       - script.execute:
           id: send_ble_msg
-          msg: !lambda return "{\"Api\":\"GetWorkState\"}";
+          # GetWorkState
+          msg: !lambda return "{\"A\":1}";
       - script.wait: send_ble_msg
       - delay: 5s
       - script.execute:
           id: send_ble_msg
-          msg: !lambda return "{\"Api\":\"GetFanInfo\"}";
+          # GetFanInfo
+          msg: !lambda return "{\"A\":17}";
       - script.wait: send_ble_msg
 
 time:
