@@ -343,45 +343,121 @@ text_sensor:
               json::parse_json(accumulated.substr(2), [&parsed](JsonObject root) -> bool {
                 parsed = true;
                 
-                // Iterate through all JSON keys
+                 // Determine API (A) and populate sensors/text sensors accordingly
+                int api = 0;
+                if (!root["A"].isNull()) {
+                  api = root["A"].as<int>();
+                }
+
                 for (JsonObject::iterator it = root.begin(); it != root.end(); ++it) {
                   std::string key = it->key().c_str();
-                  std::string transformed;
-                  
-                  // Convert to snake_case, handling existing underscores
-                  for (size_t i = 0; i < key.length(); i++) {
-                    if (std::isupper(key[i])) {
-                      // Add underscore before uppercase letters, but not if:
-                      // - it's the first character
-                      // - previous character was already an underscore
-                      if (i > 0 && key[i-1] != '_') {
-                        transformed += '_';
-                      }
-                      transformed += std::tolower(key[i]);
-                    } else {
-                      transformed += key[i];
+
+                  if (key == "A") {
+                    continue; // Already processed API
+                  }
+
+                  // GetWorkState (A == 1)
+                  if (api == 1) {
+                    if (key == "C") {
+                      // Maps to "control type" but not currently used
+                      continue;
+                    }
+                    if (key == "M") {
+                      id(mode).publish_state(it->value().as<std::string>());                 // Mode
+                      continue;
+                    }
+                    if (key == "R") {
+                      id(range).publish_state(it->value().as<std::string>());                // Range
+                      continue;
+                    }
+                    if (key == "S") {
+                      id(sensor_state).publish_state(it->value().as<std::string>());         // SensorState
+                      continue;
+                    }
+                    if (key == "T") { // Temp sample (example shows 553 -> probably 55.3)
+                      float v = it->value().as<float>() / 10.0f;
+                      id(temp_sample).publish_state(v);
+                      continue;
+                    }
+                    if (key == "H") {
+                      id(humidity_sample).publish_state(it->value().as<float>());            // Humidity sample
+                      continue;
                     }
                   }
-                  
-                  // Try to find a matching sensor
-                  auto *sensor = App.get_sensor_by_key(fnv1_hash(transformed.c_str()));
-                  if (sensor != nullptr) {
-                    float value = it->value().as<float>();
-                    sensor->publish_state(value);
-                    continue;
+
+                  // GetParameter (A == 2)
+                  if (api == 2) {
+                    if (key == "B") { // Mode (sometimes returned as B)
+                      id(mode).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
+                    if (key == "C") { // Fan type
+                      id(fan_type).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
+                    if (key == "D") { // GetTemp_H
+                      float v = it->value().as<float>() / 10.0f;
+                      id(get_temp_h).publish_state(v);
+                      continue;
+                    }
+                    if (key == "F") { // GetTemp_L
+                      float v = it->value().as<float>() / 10.0f;
+                      id(get_temp_l).publish_state(v);
+                      continue;
+                    }
+                    if (key == "G") { // GetHum_H
+                      id(get_hum_h).publish_state(it->value().as<float>());
+                      continue;
+                    }
+                    if (key == "H") { // GetHum_L
+                      id(get_hum_l).publish_state(it->value().as<float>());
+                      continue;
+                    }
+                    if (key == "I") { // GetHum_Range
+                      id(get_hum_range).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
+                    if (key == "J") { // GetHour
+                      id(get_hour).publish_state(it->value().as<float>());
+                      continue;
+                    }
+                    if (key == "K") { // GetMinute
+                      id(get_minute).publish_state(it->value().as<float>());
+                      continue;
+                    }
+                    if (key == "L") { // GetTime_Range
+                      id(get_time_range).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
+                    if (key == "M") { // GuideSetup / Pair state
+                      id(pair_state).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
                   }
-                  
-                  // Try to find a matching text sensor
-                  auto *text_sensor = App.get_text_sensor_by_key(fnv1_hash(transformed.c_str()));
-                  if (text_sensor != nullptr) {
-                    std::string value = it->value().as<std::string>();
-                    text_sensor->publish_state(value);
-                    continue;
+
+                  // GetFanInfo (A == 17)
+                  if (api == 17) {
+                    if (key == "N") { // Name
+                      id(name).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
+                    if (key == "M") { // Model
+                      id(model).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
+                    if (key == "S") { // Serial number
+                      id(serial_num).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
+                    if (key == "G") { // GuideSetup / Pair state
+                      id(pair_state).publish_state(it->value().as<std::string>());
+                      continue;
+                    }
                   }
-                  
-                  ESP_LOGD("quietcool", "No sensor found for key: %s", transformed.c_str());
+
+                  ESP_LOGD("quietcool", "No mapping for API %d key: %s", api, key.c_str());
                 }
-                
+
                 return true;
               });
               if (!parsed) {
