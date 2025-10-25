@@ -356,22 +356,21 @@ text_sensor:
                     continue; // Already processed API
                   }
 
-                  // GetWorkState (A == 1)
+                  // GetWorkState
                   if (api == 1) {
-                    if (key == "C") {
-                      // Maps to "control type" but not currently used
+                    if (key == "C") { // Control Type but not currently used
                       continue;
                     }
-                    if (key == "M") {
-                      id(mode).publish_state(it->value().as<std::string>());                 // Mode
+                    if (key == "M") { // Mode
+                      id(mode).publish_state(it->value().as<std::string>());
                       continue;
                     }
-                    if (key == "R") {
-                      id(range).publish_state(it->value().as<std::string>());                // Range
+                    if (key == "R") { // Range
+                      id(range).publish_state(it->value().as<std::string>());
                       continue;
                     }
-                    if (key == "S") {
-                      id(sensor_state).publish_state(it->value().as<std::string>());         // SensorState
+                    if (key == "S") { // Sensor state
+                      id(sensor_state).publish_state(it->value().as<std::string>());
                       continue;
                     }
                     if (key == "T") { // Temp sample (example shows 553 -> probably 55.3)
@@ -379,13 +378,13 @@ text_sensor:
                       id(temp_sample).publish_state(v);
                       continue;
                     }
-                    if (key == "H") {
-                      id(humidity_sample).publish_state(it->value().as<float>());            // Humidity sample
+                    if (key == "H") { // Humidity sample
+                      id(humidity_sample).publish_state(it->value().as<float>());
                       continue;
                     }
                   }
 
-                  // GetParameter (A == 2)
+                  // GetParameter
                   if (api == 2) {
                     if (key == "B") { // Mode (sometimes returned as B)
                       id(mode).publish_state(it->value().as<std::string>());
@@ -396,12 +395,20 @@ text_sensor:
                       continue;
                     }
                     if (key == "D") { // GetTemp_H
-                      float v = it->value().as<float>() / 10.0f;
+                      float v = it->value().as<float>();
+                      if (v != 255.0f) {
+                        // 255.0f would mean it's initially 255, which is a special value indicating "not set"
+                        v = v / 10.0f;
+                      }
                       id(get_temp_h).publish_state(v);
                       continue;
                     }
                     if (key == "F") { // GetTemp_L
-                      float v = it->value().as<float>() / 10.0f;
+                      float v = it->value().as<float>();
+                      if (v != 255.0f) {
+                        // 255.0f would mean it's initially 255, which is a special value indicating "not set"
+                        v = v / 10.0f;
+                      }
                       id(get_temp_l).publish_state(v);
                       continue;
                     }
@@ -429,13 +436,13 @@ text_sensor:
                       id(get_time_range).publish_state(it->value().as<std::string>());
                       continue;
                     }
-                    if (key == "M") { // GuideSetup / Pair state
+                    if (key == "M") { // Pair state
                       id(pair_state).publish_state(it->value().as<std::string>());
                       continue;
                     }
                   }
 
-                  // GetFanInfo (A == 17)
+                  // GetFanInfo
                   if (api == 17) {
                     if (key == "N") { // Name
                       id(name).publish_state(it->value().as<std::string>());
@@ -449,8 +456,7 @@ text_sensor:
                       id(serial_num).publish_state(it->value().as<std::string>());
                       continue;
                     }
-                    if (key == "G") { // GuideSetup / Pair state
-                      id(pair_state).publish_state(it->value().as<std::string>());
+                    if (key == "G") { // GuideSetup but not currently used
                       continue;
                     }
                   }
